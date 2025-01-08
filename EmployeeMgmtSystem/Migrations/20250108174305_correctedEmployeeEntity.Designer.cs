@@ -4,6 +4,7 @@ using EmployeeMgmtSystem.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EmployeeMgmtSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250108174305_correctedEmployeeEntity")]
+    partial class correctedEmployeeEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -56,7 +59,7 @@ namespace EmployeeMgmtSystem.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("DepartmentId")
+                    b.Property<int>("DepartmentId")
                         .HasColumnType("int");
 
                     b.Property<string>("Email")
@@ -129,9 +132,13 @@ namespace EmployeeMgmtSystem.Migrations
 
             modelBuilder.Entity("EmployeeMgmtSystem.Models.Employee", b =>
                 {
-                    b.HasOne("EmployeeMgmtSystem.Models.Department", null)
+                    b.HasOne("EmployeeMgmtSystem.Models.Department", "Department")
                         .WithMany("Employees")
-                        .HasForeignKey("DepartmentId");
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Department");
                 });
 
             modelBuilder.Entity("EmployeeMgmtSystem.Models.PerformanceReview", b =>

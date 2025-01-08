@@ -18,10 +18,10 @@ namespace EmployeeMgmtSystem.DataAccess
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // Configure one to many relationship between Department and Employee
-            modelBuilder.Entity<Department>().HasMany(dept=>dept.Employees)
+            /*modelBuilder.Entity<Department>().HasMany(dept=>dept.Employees)
                 .WithOne(emp=>emp.Department)
                 .HasForeignKey(emp=>emp.DepartmentId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Restrict);*/
 
             // Configure one to one relationship for Manager in Department
             modelBuilder.Entity<Department>().HasOne(dept => dept.Manager)

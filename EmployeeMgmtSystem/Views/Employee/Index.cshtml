@@ -1,4 +1,10 @@
 ﻿
+<style>
+    .hidden{
+        display: none;
+    }
+</style>
+
 <div class="modal fade" id="createOrUpdateEmpModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -51,7 +57,8 @@
             </div>
             <div class="modal-footer">
                 <button type="button" onclick="CloseModal()" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-success">Save</button>
+                <button type="button" id="modalSaveBtn" class="btn btn-success" onclick="SaveEmployee()">Save</button>
+                <button type="button" id="modalUpdateBtn" class="btn btn-success hidden" onclick="UpdateEmployee()">Update</button>
             </div>
         </div>
     </div>
@@ -73,6 +80,7 @@
     <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
     <script type="text/javascript">
         
+        var employeeList = [];
         $(document).ready(function () {
             CreateDataTable();
         });
@@ -83,6 +91,8 @@
         }
         function CloseModal()
         {
+            $("#modalSaveBtn").removeClass('hidden');
+            $("#modalUpdateBtn").addClass('hidden');
             $("#createOrUpdateEmpModal").modal('hide');
         }
 
@@ -101,53 +111,191 @@
                     url: "/Employee/GetAllEmployees",
                     type: "GET"
                 },
+                "initComplete": function (settings, json) {
+                    employeeList = json;
+                },
                 aoColumns: [
                     {
                         sTitle: "Emp Id",
-                        mDataProp: "Id",
+                        mDataProp: "id",
                         className: "text-center",
                         visible: false
                     },
                     {
                         sTitle: "Name",
                         "mRender": function (data, type, full) {
-                            return full.Name;
+                            return full.name;
                         }
                     },
                     {
                         sTitle: "Email",
                         "mRender": function (data, type, full) {
-                            return full.Email;
+                            return full.email;
                         }
                     },
                     {
                         sTitle: "Phone",
                         "mRender": function (data, type, full) {
-                            return full.Phone;
+                            return full.phone;
                         }
                     },
                     {
                         sTitle: "Position",
                         "mRender": function (data, type, full) {
-                            return full.Position;
+                            return full.position;
                         }
                     },
                     {
                         sTitle: "Join Date",
                         "mRender": function (data, type, full) {
-                            return full.JoinDate;
+                            return full.joinDate.split("T")[0];
                         }
                     },
                     {
                         sTitle: "Status",
                         "mRender": function (data, type, full) {
-                            return full.Status == 1 ? "Active" : "In-Active";
+                            return full.status == true ? "Active" : "In-Active";
+                        }
+                    },
+                    {
+                        sTitle: "Action",
+                        "mRender": function (data, type, full) {
+                            var update = `<button type="button" class="btn btn-secondary" onclick="EmpUpdate(${full.id})">Update</button>`;
+                            var deleteBtn = `<button type="button" class="btn btn-danger" onclick="EmpDelete(${full.id})">Delete</button>`;
+
+                            return update + deleteBtn;
                         }
                     },
                 ]
             });
         }
 
+        function EmployeeSaveValidation() { 
+
+            var flag = true;
+            if ($("#name").val() == "") { 
+                alert("Name cannot be empty!");
+                flag = false;
+                return;
+            }
+            if ($("#position").val() == "") {
+                alert("Position cannot be empty!");
+                flag = false;
+                return;
+            }
+            if ($("#joinDate").val() == "" || $("#joinDate").val() == null) {
+                alert("Joining Date cannot be empty!");
+                flag = false;
+                return;
+            }
+            return flag;
+        }
+
+        function SaveEmployee()
+        {
+            if (!EmployeeSaveValidation()) return;
+
+            var empObj = {
+                Name : $("#name").val(),
+                Email : $("#email").val(),
+                Phone: $("#phone").val(),
+                Position: $("#position").val(),
+                JoinDate: $("#joinDate").val(),
+                Status: $("#status").val() == "1" ? true : false
+            }
+
+            $.ajax({
+                url: "/Employee/CreateEmployee",
+                type: "POST",
+                // dataType: "json",
+                data: { employeeObj: empObj },
+                success: function (data) {
+                    
+                    if (data.succeeded) {
+                        empTableContainer.ajax.reload();
+                        alert("Employee Saved Successfully!");
+                    }
+                    else {
+                        alert(data.message);
+                    }
+                },
+                error: function (error) {
+                    alert(error);
+                }
+            });
+        }
+        let empObj = "";
+        function EmpUpdate(id) {
+            OpenModal();
+            $("#modalSaveBtn").addClass('hidden');
+            $("#modalUpdateBtn").removeClass('hidden');
+
+            empObj = employeeList.find(x => x.id == id);
+            
+            $("#name").val(empObj.name);
+            $("#email").val(empObj.email);
+            $("#phone").val(empObj.phone);
+            $("#position").val(empObj.position);
+            var formattedDate = empObj.joinDate.split("T")[0];
+            $("#joinDate").val(formattedDate);
+            $("#status").val(empObj.status == true ? 1 : 0);
+            
+        }
+        function UpdateEmployee() {
+            if (!EmployeeSaveValidation()) return;
+
+            var empObjUpdate = {
+                Id: empObj.id,
+                Name: $("#name").val(),
+                Email: $("#email").val(),
+                Phone: $("#phone").val(),
+                Position: $("#position").val(),
+                JoinDate: $("#joinDate").val(),
+                Status: $("#status").val() == "1" ? true : false
+            }
+
+            $.ajax({
+                url: "/Employee/UpdateEmployee",
+                type: "POST",
+                // dataType: "json",
+                data: { employeeObj: empObjUpdate },
+                success: function (data) {
+                    
+                    if (data.succeeded) {
+                        empTableContainer.ajax.reload();
+                        alert(data.message);
+                    }
+                    else {
+                        alert(data.message);
+                    }
+                },
+                error: function (error) {
+                    alert(error);
+                }
+            });
+        }
+
+        function EmpDelete(id) {
+            $.ajax({
+                url: "/Employee/DeleteEmployee",
+                type: "POST",
+                // dataType: "json",
+                data: { empId: id },
+                success: function (data) {
+                    
+                    if (data.succeeded) {
+                        alert(data.message);
+                        empTableContainer.ajax.reload();
+                    }
+                    else {
+                        alert(data.message);
+                    }
+                },
+                error: function (error) {
+                    alert(error);
+                }
+            });
+        }
     </script>
 
 }
