@@ -1,0 +1,261 @@
+﻿
+<style>
+    .hidden{
+        display: none;
+    }
+</style>
+
+<div class="modal fade" id="createOrUpdateDeptModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Create Department</h5>
+            </div>
+            <div class="modal-body py-3">
+                <input type="text" id="Id" hidden />
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="name">Dept. Name</label>
+                            <input type="text" id="deptName" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="email">Dept. Budget</label>
+                            <input type="text" id="deptBudget" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="CloseModal()" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" id="modalSaveBtn" class="btn btn-success" onclick="SaveDept()">Save</button>
+                <button type="button" id="modalUpdateBtn" class="btn btn-success hidden" onclick="UpdateDept()">Update</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h4>Department List</h4>
+<div class="row my-4">
+    <div class="text-end">
+        <button class="btn btn-sm btn-primary" id="addEmployee" onclick="OpenModal()"> Create Department </button>
+    </div>
+</div>
+<div class="row">
+    <table class="table table-bordered table-striped border-1" id="deptTable"></table>
+</div>
+
+
+@section Scripts {
+    <!-- DataTables JS -->
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.13.1/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript">
+
+        var employeeList = [];
+        $(document).ready(function () {
+            CreateDataTable();
+        });
+
+        function OpenModal()
+        {
+            $("#createOrUpdateDeptModal").modal('show');
+        }
+        function CloseModal()
+        {
+            $("#modalSaveBtn").removeClass('hidden');
+            $("#modalUpdateBtn").addClass('hidden');
+            $("#createOrUpdateDeptModal").modal('hide');
+        }
+
+        var deptTableContainer;
+
+        function CreateDataTable()
+        {
+            deptTableContainer = $('#deptTable').DataTable({
+                responsive: true,
+                serverSide: false,
+                searching: false,
+                "bAutoWidth": true,
+                sAjaxDataProp: "",
+                // lengthMenu: [[10, 20, 50, -1], [10, 20, 50, "All"]],
+                ajax: {
+                    url: "/Employee/GetAllEmployees",
+                    type: "GET"
+                },
+                "initComplete": function (settings, json) {
+                    employeeList = json;
+                },
+                aoColumns: [
+                    {
+                        sTitle: "Emp Id",
+                        mDataProp: "id",
+                        className: "text-center",
+                        visible: false
+                    },
+                    {
+                        sTitle: "Name",
+                        "mRender": function (data, type, full) {
+                            return full.name;
+                        }
+                    },
+                    {
+                        sTitle: "Email",
+                        "mRender": function (data, type, full) {
+                            return full.email;
+                        }
+                    },
+                    {
+                        sTitle: "Phone",
+                        "mRender": function (data, type, full) {
+                            return full.phone;
+                        }
+                    },
+                    {
+                        sTitle: "Position",
+                        "mRender": function (data, type, full) {
+                            return full.position;
+                        }
+                    },
+                    {
+                        sTitle: "Join Date",
+                        "mRender": function (data, type, full) {
+                            return full.joinDate.split("T")[0];
+                        }
+                    },
+                    {
+                        sTitle: "Status",
+                        "mRender": function (data, type, full) {
+                            return full.status == true ? "Active" : "In-Active";
+                        }
+                    },
+                    {
+                        sTitle: "Action",
+                        "mRender": function (data, type, full) {
+                            var update = `<button type="button" class="btn btn-secondary" onclick="EmpUpdate(${full.id})">Update</button>`;
+                            var deleteBtn = `<button type="button" class="btn btn-danger" onclick="EmpDelete(${full.id})">Delete</button>`;
+
+                            return update + deleteBtn;
+                        }
+                    },
+                ]
+            });
+        }
+
+        function DeptSaveValidation() {
+
+            var flag = true;
+            if ($("#deptName").val() == "") {
+                alert("Dept Name cannot be empty!");
+                flag = false;
+                return;
+            }
+            if ($("#deptBudget").val() == "") {
+                alert("Dept Budget cannot be empty or Zero!");
+                flag = false;
+                return;
+            }
+            
+            return flag;
+        }
+
+        function SaveDept() {
+            if (!DeptSaveValidation()) return;
+
+            var deptObj = {
+                Name : $("#deptName").val(),
+                Budget: parseFloat($("#deptBudget").val())??0
+            }
+
+            $.ajax({
+                url: "/Employee/CreateEmployee",
+                type: "POST",
+                // dataType: "json",
+                data: { departmentObj: deptObj },
+                success: function (data) {
+
+                    if (data.succeeded) {
+                        deptTableContainer.ajax.reload();
+                        alert("Employee Saved Successfully!");
+                    }
+                    else {
+                        alert(data.message);
+                    }
+                },
+                error: function (error) {
+                    alert(error);
+                }
+            });
+        }
+        let empObj = "";
+        function EmpUpdate(id) {
+            OpenModal();
+            $("#modalSaveBtn").addClass('hidden');
+            $("#modalUpdateBtn").removeClass('hidden');
+
+            empObj = employeeList.find(x => x.id == id);
+
+            $("#name").val(empObj.name);
+            $("#email").val(empObj.email);
+            $("#phone").val(empObj.phone);
+            $("#position").val(empObj.position);
+            var formattedDate = empObj.joinDate.split("T")[0];
+            $("#joinDate").val(formattedDate);
+            $("#status").val(empObj.status == true ? 1 : 0);
+
+        }
+        function UpdateDept() {
+            if (!DeptSaveValidation()) return;
+
+            var deptObjUpdate = {
+                Id: empObj.id,
+                Name: $("#deptName").val(),
+                Budget: parseFloat($("#deptBudget").val()) ?? 0
+            }
+
+            $.ajax({
+                url: "/Employee/UpdateEmployee",
+                type: "POST",
+                // dataType: "json",
+                data: { departmentObj: deptObjUpdate },
+                success: function (data) {
+
+                    if (data.succeeded) {
+                        deptTableContainer.ajax.reload();
+                        alert(data.message);
+                    }
+                    else {
+                        alert(data.message);
+                    }
+                },
+                error: function (error) {
+                    alert(error);
+                }
+            });
+        }
+
+        function EmpDelete(id) {
+            $.ajax({
+                url: "/Employee/DeleteEmployee",
+                type: "POST",
+                // dataType: "json",
+                data: { empId: id },
+                success: function (data) {
+
+                    if (data.succeeded) {
+                        alert(data.message);
+                        deptTableContainer.ajax.reload();
+                    }
+                    else {
+                        alert(data.message);
+                    }
+                },
+                error: function (error) {
+                    alert(error);
+                }
+            });
+        }
+    </script>
+
+}
